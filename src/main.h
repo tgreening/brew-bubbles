@@ -36,7 +36,7 @@ SOFTWARE. */
 #include <WiFiManager.h>
 #include <DoubleResetDetect.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
+#include <ThingSpeak.h>
 
 // DRD_TIMEOUT =    Maximum number of seconds between resets that counts
 //                  as a double reset
@@ -45,8 +45,10 @@ SOFTWARE. */
 //
 #define DRD_TIMEOUT 3.0
 #define DRD_ADDRESS 0x00
+void updateThingSpeak();
 
 static bool __attribute__((unused)) doTarget = false;  // Semaphore for Target timer
 static bool __attribute__((unused)) doBF = false;      // Semaphore for BF timer
+static bool __attribute__((unused)) doTSUpdate = false;      // Semaphore for BF timer
 
 #endif // _MAIN_H

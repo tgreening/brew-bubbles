@@ -317,6 +317,11 @@ void WebServer::aliases() {
             bfconfig["bfkey"] = config->bfkey;
             bfconfig["freq"] = config->bffreq;
 
+            // Serialize Brewer's Friend Settings Object
+            JsonObject thingspeak = doc.createNestedObject("thingspeak");
+            thingspeak["api_key"] = THINGSPEAK_API_KEY;
+            thingspeak["channel"] = THINGSPEAK_CHANNEL;
+
             // Serialize SPIFFS OTA update choice
             doc["dospiffs1"] = config->dospiffs1;
             doc["dospiffs2"] = config->dospiffs2;

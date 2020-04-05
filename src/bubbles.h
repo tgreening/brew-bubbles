@@ -31,7 +31,7 @@ SOFTWARE. */
 #include "OneWire.h"
 #include <CircularBuffer.h>
 #include <Arduino.h>
-
+ 
 class Bubbles {
     private:
         // Singleton Declarations
@@ -66,6 +66,7 @@ class Bubbles {
         float getAvgBpm();
         bool doBub;
         void setLast(double);                // Push last reading on reboot
+        void updateThingSpeak();
 };
 
 #endif // _BUBBLES_H

@@ -25,64 +25,84 @@ SOFTWARE. */
 IPAddress bfIp = INADDR_NONE;
 IPAddress targetIp = INADDR_NONE;
 
-void httpPost() {
+void httpPost()
+{
     JsonConfig *config = JsonConfig::getInstance();
 
     Log.verbose(F("Triggered httpPost()." CR));
 
-    if (strlen(config->targeturl) > 3) {
+    if (strlen(config->targeturl) > 3)
+    {
         Log.notice(F("Posting to: %s" CR), config->targeturl);
 
         LCBUrl url;
-        if (url.setUrl(config->targeturl)) {
-            if (postJson(config->targeturl)) {
+        if (url.setUrl(config->targeturl))
+        {
+            if (postJson(config->targeturl))
+            {
                 Log.notice(F("Target post ok." CR));
                 return;
-            } else {
+            }
+            else
+            {
                 Log.error(F("Target post failed." CR));
                 return;
             }
-        } else {
+        }
+        else
+        {
             Log.error(F("Unable to parse target URL." CR));
         }
-    } else {
+    }
+    else
+    {
         Log.verbose(F("No target URL in configuration, skipping." CR));
         return;
     }
 }
 
-void bfPost() {
+void bfPost()
+{
     Log.verbose(F("Triggered bfPost()." CR));
     JsonConfig *config = JsonConfig::getInstance();
-    if (strlen(config->bfkey) > 3) {
+    if (strlen(config->bfkey) > 3)
+    {
         Log.notice(F("Posting to: %s" CR), BFURL);
 
         // Concatenat BF URL
         char bfUrl[94];
-        strcpy (bfUrl, BFURL);
-        strcat (bfUrl, config->bfkey);
+        strcpy(bfUrl, BFURL);
+        strcat(bfUrl, config->bfkey);
 
-        if (postJson(bfUrl, API_KEY)) {
+        if (postJson(bfUrl, API_KEY))
+        {
             Log.notice(F("BF target post ok." CR));
             return;
-        } else {
+        }
+        else
+        {
             Log.warning(F("BF target post failed." CR));
             return;
         }
-    } else {
+    }
+    else
+    {
         Log.verbose(F("No BF key in configuration, skipping." CR));
         return;
     }
 }
 
-bool postJson(String targetUrl) {
-    const char* key = ""; //'\0';  
+bool postJson(String targetUrl)
+{
+    const char *key = ""; //'\0';
     return postJson(targetUrl, key);
 }
 
-bool postJson(String targetUrl, const char* key) {
+bool postJson(String targetUrl, const char *key)
+{
     LCBUrl url;
-    if (url.setUrl(targetUrl)) {
+    if (url.setUrl(targetUrl))
+    {
         JsonConfig *config = JsonConfig::getInstance();
         Bubbles *bubble = Bubbles::getInstance();
         const size_t capacity = JSON_OBJECT_SIZE(8) + 210;
@@ -110,34 +130,49 @@ bool postJson(String targetUrl, const char* key) {
         // This is necessary due to flakey name resolution and because
         // WiFiClient::connect() does not use mDNS
         IPAddress resolvedIP;
-        if (!WiFi.hostByName(url.getHost().c_str(), resolvedIP)) {
+        if (!WiFi.hostByName(url.getHost().c_str(), resolvedIP))
+        {
             Log.warning(F("Host lookup failed for %s." CR), url.getHost().c_str());
             // Failed but see if we resolved this previously
-            if (key && !key[0]) {
+            if (key && !key[0])
+            {
                 // Lookup failed and we're doing a target
-                if (targetIp != INADDR_NONE) {
+                if (targetIp != INADDR_NONE)
+                {
                     resolvedIP = targetIp;
-                } else {
+                }
+                else
+                {
                     Log.error(F("No cached IP for %s." CR), url.getHost().c_str());
                     return false;
                 }
-            } else {
+            }
+            else
+            {
                 // Lookup failed and we're doing BF
-                if (bfIp != INADDR_NONE) {
+                if (bfIp != INADDR_NONE)
+                {
                     resolvedIP = bfIp;
-                } else {
+                }
+                else
+                {
                     Log.error(F("No cached IP for %s." CR), url.getHost().c_str());
                     return false;
                 }
-           }
-        } else { // We resolved the name to an IP
-             if (key && !key[0]) {
+            }
+        }
+        else
+        { // We resolved the name to an IP
+            if (key && !key[0])
+            {
                 // Lookup succeeded and we're doing Target
                 targetIp = resolvedIP;
-            } else {
+            }
+            else
+            {
                 // Lookup succeeded and we're doing BF
                 bfIp = resolvedIP;
-           }           
+            }
         }
         Log.verbose(F("Resolved host %s to IP %s" CR), url.getHost().c_str(), resolvedIP.toString().c_str());
 
@@ -153,11 +188,14 @@ bool postJson(String targetUrl, const char* key) {
         // -1 = TIMED_OUT
         // -2 = INVALID_SERVER
         // -3 = TRUNCATED
-        // -4 = INVALID_RESPONSE 
-        if (!retval == 1) {
+        // -4 = INVALID_RESPONSE
+        if (!retval == 1)
+        {
             Log.warning(F("Connection failed, Host: %s, Port: %l (Err: %d)" CR), url.getHost().c_str(), url.getPort(), retval);
             return false;
-        } else {
+        }
+        else
+        {
             Log.notice(F("Connected to: %s, %l" CR), url.getHost().c_str(), url.getPort());
             Log.verbose("Connected to endpoint." CR);
 
@@ -181,10 +219,11 @@ bool postJson(String targetUrl, const char* key) {
             client.print(F("Content-Length: "));
             client.println(measureJson(doc));
             // Content Type
-            Log.verbose(F("Content-Type: application/json" CR)); 
+            Log.verbose(F("Content-Type: application/json" CR));
             client.println(F("Content-Type: application/json"));
             // Key
-            if (key && !key[0]) {
+            if (key && !key[0])
+            {
                 Log.verbose(F("X-AIO-Key: %s" CR), key);
                 client.print(F("X-AIO-Key: "));
                 client.println(key);
@@ -198,18 +237,51 @@ bool postJson(String targetUrl, const char* key) {
             // Check the  HTTP status (should be "HTTP/1.1 200 OK")
             char status[32] = {0};
             client.readBytesUntil('\r', status, sizeof(status));
-            client.stop(); 
+            client.stop();
             Log.verbose(F("Status: %s" CR), status);
-            if ((String(status).endsWith("200 OK"))) {
+            if ((String(status).endsWith("200 OK")))
+            {
                 Log.verbose("JSON posted." CR);
                 return true;
-            } else {
+            }
+            else
+            {
                 Log.error(F("Unexpected status: %s" CR), status);
                 return false;
             }
         }
-    } else {
+    }
+    else
+    {
         Log.error(F("Unable to parse target URL: %s" CR), targetUrl.c_str());
         return false;
+    }
+}
+
+void updateThingSpeak()
+{
+    Log.verbose(F("Triggered updateThingSpeak ()." CR));
+
+    if (strlen(THINGSPEAK_API_KEY) > 3)
+    {
+
+        WiFiClient client;
+        ThingSpeak.begin(client);
+
+        int x = ThingSpeak.writeField(THINGSPEAK_CHANNEL, 1, 0, THINGSPEAK_API_KEY);
+
+        // Check the return code
+        if (x == 200)
+        {
+            Log.verbose(F("Channel update successful." CR));
+        }
+        else
+        {
+            Log.error(F("Problem updating channel. HTTP error code: %i" CR), x);
+        }
+    }
+    else
+    {
+        Log.verbose(F("No Thingspeak API Key specified.  Quitting" CR));
     }
 }

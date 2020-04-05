@@ -24,26 +24,30 @@ SOFTWARE. */
 
 Bubbles *pBubbles; // Pointer to Counter class
 
-static ICACHE_RAM_ATTR void HandleInterruptsStatic(void) { // External interrupt handler
+static ICACHE_RAM_ATTR void HandleInterruptsStatic(void)
+{                                 // External interrupt handler
     pBubbles->handleInterrupts(); // Calls class member handler
 }
 
-Bubbles* Bubbles::single = NULL; // Holds pointer to class
+Bubbles *Bubbles::single = NULL; // Holds pointer to class
 
-Bubbles* Bubbles::getInstance() {
-    if (!single) {
+Bubbles *Bubbles::getInstance()
+{
+    if (!single)
+    {
         single = new Bubbles();
         single->start();
     }
     return single;
 }
 
-void Bubbles::start() {
-    pinMode(COUNTPIN, INPUT);       // Change pinmode to input
+void Bubbles::start()
+{
+    pinMode(COUNTPIN, INPUT);                                                         // Change pinmode to input
     attachInterrupt(digitalPinToInterrupt(COUNTPIN), HandleInterruptsStatic, RISING); // FALLING, RISING or CHANGE
-    pBubbles = single;              // Assign current instance to pointer 
-    single->ulLastReport = millis();// Store the last report timer
-    single->pulse = 0;              // Reset pulse counter
+    pBubbles = single;                                                                // Assign current instance to pointer
+    single->ulLastReport = millis();                                                  // Store the last report timer
+    single->pulse = 0;                                                                // Reset pulse counter
     single->doBub = false;
 
     // Set starting values
@@ -52,14 +56,16 @@ void Bubbles::start() {
     single->lastBpm = 0.0;
     single->lastAmb = 0.0;
     single->lastVes = 0.0;
-    
+
     // Set starting time
     NtpHandler *ntpTime = NtpHandler::getInstance();
     ntpTime->update();
     single->lastTime = ntpTime->Time;
 }
 
-void Bubbles::update() { // Regular update loop, once per minute
+void Bubbles::update()
+{ // Regular update loop, once per minute
+
     // Handle NTP Time
     NtpHandler *ntpTime = NtpHandler::getInstance();
     ntpTime->update();
@@ -77,37 +83,41 @@ void Bubbles::update() { // Regular update loop, once per minute
 
     Log.verbose(F("Time is %s, BPM is %D." CR), single->lastTime, single->lastBpm);
     Log.verbose(F("Averages: BPM = %D (%l in sample), Ambient = %D (%l in sample), Vessel = %D (%l in sample)." CR),
-        single->getAvgBpm(), bubAvg.size(),
-        single->getAvgAmbient(), tempAmbAvg.size(),
-        single->getAvgVessel(), tempVesAvg.size()
-    );
+                single->getAvgBpm(), bubAvg.size(),
+                single->getAvgAmbient(), tempAmbAvg.size(),
+                single->getAvgVessel(), tempVesAvg.size());
 }
 
-void Bubbles::handleInterrupts(void) { // Bubble Interrupt handler
+void Bubbles::handleInterrupts(void)
+{ // Bubble Interrupt handler
     digitalWrite(LED, LOW);
     unsigned long now = micros();
-    if ((now - ulMicroLast) > RESOLUTION) { // Filter noise/bounce
-        single->pulse++;    // Increment pulse count
+    if ((now - ulMicroLast) > RESOLUTION)
+    {                    // Filter noise/bounce
+        single->pulse++; // Increment pulse count
     }
     doBub = true;
 }
 
-float Bubbles::getRawBpm() { // Return raw pulses per minute (resets counter)
-    unsigned long thisTime = millis(); // Get timer value now
+float Bubbles::getRawBpm()
+{                                                             // Return raw pulses per minute (resets counter)
+    unsigned long thisTime = millis();                        // Get timer value now
     unsigned long ulLapsed = thisTime - single->ulLastReport; // Millis since last run
-    float fLapsed = (float) ulLapsed; // Cast to float
-    float secs = fLapsed / 60000.0; // Minutes since last request
-    float ppm = (pulse / secs); // Calculate PPM
-    single->pulse = 0; // Zero the pulse counter
-    single->ulLastReport = millis(); // Store the last report timer
-    return ppm; // Return pulses per minute
+    float fLapsed = (float)ulLapsed;                          // Cast to float
+    float secs = fLapsed / 60000.0;                           // Minutes since last request
+    float ppm = (pulse / secs);                               // Calculate PPM
+    single->pulse = 0;                                        // Zero the pulse counter
+    single->ulLastReport = millis();                          // Store the last report timer
+    return ppm;                                               // Return pulses per minute
 }
 
-float Bubbles::getAmbientTemp() {
+float Bubbles::getAmbientTemp()
+{
     OneWire ambient(AMBSENSOR);
     byte addrAmb[8];
     float fAmbTemp = -100.0;
-    while (ambient.search(addrAmb)) { // Make sure we have a sensor
+    while (ambient.search(addrAmb))
+    { // Make sure we have a sensor
         DallasTemperature sensorAmbient(&ambient);
         sensorAmbient.begin();
         sensorAmbient.requestTemperatures();
@@ -121,15 +131,17 @@ float Bubbles::getAmbientTemp() {
     return fAmbTemp;
 }
 
-float Bubbles::getVesselTemp() {
+float Bubbles::getVesselTemp()
+{
     OneWire vessel(VESSENSOR);
     byte addrVes[8];
     float fVesTemp = -100.0;
-    while (vessel.search(addrVes)) { // Make sure we have a sensor
+    while (vessel.search(addrVes))
+    { // Make sure we have a sensor
         DallasTemperature sensorVessel(&vessel);
         sensorVessel.begin();
         sensorVessel.requestTemperatures();
-        
+
         JsonConfig *config = JsonConfig::getInstance();
         if (config->tempinf == true)
             fVesTemp = sensorVessel.getTempFByIndex(0) + config->calVessel;
@@ -139,39 +151,64 @@ float Bubbles::getVesselTemp() {
     return fVesTemp;
 }
 
-float Bubbles::getAvgAmbient() {
+float Bubbles::getAvgAmbient()
+{
     // Retrieve TEMPAVG readings to calculate average
     float avg = 0.0;
     uint8_t size = tempAmbAvg.size();
-    for (int i = 0; i < tempAmbAvg.size(); i++) {
+    for (int i = 0; i < tempAmbAvg.size(); i++)
+    {
         // float thisTemp = tempAmbAvg[i];
         avg += tempAmbAvg[i] / size;
     }
-    return(avg);
+    return (avg);
 }
 
-float Bubbles::getAvgVessel() {
+float Bubbles::getAvgVessel()
+{
     // Return TEMPAVG readings to calculate average
     float avg = 0.0;
     uint8_t size = tempVesAvg.size();
-    for (int i = 0; i < tempVesAvg.size(); i++) {
+    for (int i = 0; i < tempVesAvg.size(); i++)
+    {
         // float thisTemp = tempVesAvg[i];
         avg += tempVesAvg[i] / size;
     }
-    return(avg);
+    return (avg);
 }
 
-float Bubbles::getAvgBpm() {
+float Bubbles::getAvgBpm()
+{
     // Return BUBAVG readings to calculate average
     float avg = 0.0;
     uint8_t size = bubAvg.size();
-    for (int i = 0; i < bubAvg.size(); i++) {
+    for (int i = 0; i < bubAvg.size(); i++)
+    {
         // float thisTemp = bubAvg[i];
         avg += bubAvg[i] / size;
     }
-    return(avg);
+    return (avg);
 }
 
-void Bubbles::setLast(double last) {
+void Bubbles::setLast(double last)
+{
     bubAvg.push(last);
+}
+
+void Bubbles::updateThingSpeak()
+{
+    WiFiClient client;
+    /*ThingSpeak.begin(client);
+
+    int x = ThingSpeak.writeField(THINGSPEAK_CHANNEL, 1, 0, THINGSPEAK_API_KEY);
+
+    // Check the return code
+    if (x == 200)
+    {
+        Serial.println("Channel update successful.");
+    }
+    else
+    {
+        Serial.println("Problem updating channel. HTTP error code " + String(x));
+    }*/
 }

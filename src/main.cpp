@@ -24,28 +24,37 @@ SOFTWARE. */
 
 DoubleResetDetect drd(DRD_TIMEOUT, DRD_ADDRESS);
 
-void setup() {
+void setup()
+{
     bool rst = drd.detect(); // Check for double-reset
     serial();
     pinMode(LED, OUTPUT);
 
     _delay(200); // Let pins settle, else detect is inconsistent
     pinMode(RESETWIFI, INPUT_PULLUP);
-    if (digitalRead(RESETWIFI) == LOW) {
+    if (digitalRead(RESETWIFI) == LOW)
+    {
         Log.notice(F("%s low, presenting portal." CR), RESETWIFI);
         doWiFi(true);
-    } else if (rst == true) {
+    }
+    else if (rst == true)
+    {
         Log.notice(F("DRD: Double reset boot, presenting portal." CR));
         doWiFi(true);
-    } else {
+    }
+    else
+    {
         Log.verbose(F("DRD: Normal boot." CR));
         doWiFi();
     }
 
     JsonConfig *config = JsonConfig::getInstance();
-    if (!MDNS.begin(config->hostname)) {
+    if (!MDNS.begin(config->hostname))
+    {
         Log.error(F("Error setting up MDNS responder."));
-    } else {
+    }
+    else
+    {
         Log.notice(F("mDNS responder started, hostname: %s.local." CR), WiFi.hostname().c_str());
         MDNS.addService("http", "tcp", 80);
     }
@@ -55,29 +64,30 @@ void setup() {
 
     NtpHandler *ntpTime = NtpHandler::getInstance();
     ntpTime->start();
-    
-    execspiffs();   // Check for pending SPIFFS update
-    loadBpm() ;     // Get last Bpm reading if it was a controlled reboot
+
+    execspiffs(); // Check for pending SPIFFS update
+    loadBpm();    // Get last Bpm reading if it was a controlled reboot
 
     Log.notice(F("Started %s version %s (%s) [%s]." CR), API_KEY, version(), branch(), build());
 }
 
-void loop() {
+void loop()
+{
     JsonConfig *config = JsonConfig::getInstance();
     WebServer *server = WebServer::getInstance();
     Bubbles *bubble = Bubbles::getInstance();
 
     // Bubble loop to create 60 second readings
     Ticker bubUpdate;
-    bubUpdate.attach(BUBLOOP, [bubble](){ bubble->update(); });
+    bubUpdate.attach(BUBLOOP, [bubble]() { bubble->update(); });
 
     // Target timer
     Ticker postTimer;
-    postTimer.attach(config->targetfreq * 60, [postTimer](){ doTarget = true; });
-    
+    postTimer.attach(config->targetfreq * 60, [postTimer]() { doTarget = true; });
+
     // Brewer's friend timer
     Ticker bfTimer;
-    bfTimer.attach(config->bffreq * 60, [bfTimer](){ doBF = true; });
+    bfTimer.attach(config->bffreq * 60, [bfTimer]() { doBF = true; });
 
     // mDNS Reset Timer - Helps avoid the host not found issues
     Ticker mDNSTimer;
@@ -88,26 +98,38 @@ void loop() {
     Ticker rebootTimer;
     rebootTimer.attach(REBOOTTIMER, reboot);
 
-    while (true) {
+    Ticker tsTimer;
+    tsTimer.attach(300, [tsTimer]() { doTSUpdate = true; });
+
+    while (true)
+    {
 
         // Handle JSON posts
-        if (doTarget) { // Do Target post
+        if (doTarget)
+        { // Do Target post
             doTarget = false;
             httpPost();
         }
-        if (doBF) { // Do BF post
+        if (doBF)
+        { // Do BF post
             doBF = false;
             bfPost();
         }
-
+        if (doTSUpdate)
+        { // Do ThingSpeak post
+            doTSUpdate = false;
+            updateThingSpeak();
+        }
         // If timers needs to be updated, update timers
-        if (config->updateTargetFreq) {
+        if (config->updateTargetFreq)
+        {
             Log.notice(F("Resetting target frequency timer to %l minutes." CR), config->targetfreq);
             postTimer.detach();
             postTimer.attach(config->targetfreq * 60, httpPost);
             config->updateTargetFreq = false;
         }
-        if (config->updateBFFreq) {
+        if (config->updateBFFreq)
+        {
             Log.notice(F("Resetting Brewer's Friend frequency timer to %l minutes." CR), config->bffreq);
             bfTimer.detach();
             bfTimer.attach(config->bffreq * 60, bfPost);
@@ -115,13 +137,17 @@ void loop() {
         }
 
         // Handle the board LED
-        if (digitalRead(COUNTPIN) == HIGH) { // Non-interrupt driven LED logic
+        if (digitalRead(COUNTPIN) == HIGH)
+        {                           // Non-interrupt driven LED logic
             digitalWrite(LED, LOW); // Turn LED on when not obstructed
-        } else {
+        }
+        else
+        {
             digitalWrite(LED, HIGH); // Make sure LED turns off after a bubble4
         }
 
-        if (bubble->doBub) { // Serial log for bubble detect
+        if (bubble->doBub)
+        { // Serial log for bubble detect
 #ifdef LOG_LEVEL
             Log.verbose(F("॰ₒ๐°৹" CR)); // Looks like a bubble, right?
 #endif
@@ -129,7 +155,7 @@ void loop() {
         }
 
         // Regular loop handlers
-        server->handleLoop();   // Handle HTML requests
-        MDNS.update();          // Handle mDNS requests
-    }
+        server->handleLoop(); // Handle HTML requests
+        MDNS.update();        // Handle mDNS requests
+      }
 }
