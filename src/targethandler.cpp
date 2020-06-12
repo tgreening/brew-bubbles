@@ -267,8 +267,9 @@ void updateThingSpeak()
 
         WiFiClient client;
         ThingSpeak.begin(client);
+        Bubbles *bubble = Bubbles::getInstance();
 
-        int x = ThingSpeak.writeField(THINGSPEAK_CHANNEL, 1, 0, THINGSPEAK_API_KEY);
+        int x = ThingSpeak.writeField(THINGSPEAK_CHANNEL, 1, bubble->getAvgBpm(), THINGSPEAK_API_KEY);
 
         // Check the return code
         if (x == 200)
